@@ -9,6 +9,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Analytics;
 using System.Diagnostics;
+using DefaultNamespace;
 using Debug = UnityEngine.Debug;
 
 [Flags]
@@ -19,84 +20,87 @@ public enum LogLevel
     objectsInScene = 4
     
 }
+
 public class Logger : MonoBehaviour
 {
     private static Logger _instance;
-    public static Logger instance { get { return _instance; } }
-    
+
+    public static Logger instance
+    {
+        get { return _instance; }
+    }
+
     public LogLevel logAmount;
     [SerializeField] private string path = String.Empty;
-    private string log = string.Empty;
-    private int objectsInScene;
+    private LogList log = new LogList();
+    private int boidsInScene;
+    private int obstaclesInScene;
     private long frameCount = 0;
-    [SerializeField]private string version = "0.0.1";
+    [SerializeField] private string version = "0.0.1";
+    [SerializeField] private bool oop;
+
     private void Awake()
     {
-        if(_instance != null) Destroy(gameObject);
+        if (_instance != null) Destroy(gameObject);
         _instance = this;
         EditorApplication.playModeStateChanged += change => ModeChanged();
-        objectsInScene = GameObject.FindObjectsOfType(typeof(MonoBehaviour)).Length;
+        boidsInScene = GameObject.FindObjectsOfType(oop ? typeof(OOP.Boid) : typeof(Boid)).Length;
+        obstaclesInScene = GameObject.FindGameObjectsWithTag("Obstacle").Length;
     }
 
     private void LateUpdate()
     {
         frameCount++;
-        log += new LogData(frameCount, Time.deltaTime, objectsInScene, logAmount).ConvertToJson() + "\n";
+        log.lD.Add(new LogData(frameCount, Time.deltaTime, boidsInScene, obstaclesInScene, BoidHelper.directions.Length, logAmount));
     }
 
-    void ModeChanged ()
+    void ModeChanged()
     {
         if (!EditorApplication.isPlayingOrWillChangePlaymode &&
-            EditorApplication.isPlaying )
+            EditorApplication.isPlaying)
         {
-            DateTime rightNow = DateTime.Now; 
-            string dateString = $"{rightNow.Day},{rightNow.Month},{rightNow.Year} {rightNow.Hour} {rightNow.Minute} {rightNow.Second}";
-            string newLog = $"Log of: {dateString} Version: {version}\n{log}";
-            JsonUtility.ToJson(newLog, true);
-            if (path == String.Empty || path == "default" || !(AssetDatabase.IsValidFolder(path)))
-            {
-                System.IO.File.WriteAllText($"{Application.persistentDataPath}/log_{dateString}_{version}.json",
-                    newLog);
-        
-                Process.Start(Application.persistentDataPath);
-            }
-            else
-            {
-                    System.IO.File.WriteAllText(path + "/log: " + dateString + " "+version+".json",
-                        newLog);          
-            }
+            var s = JsonUtility.ToJson(log);
+                System.IO.File.WriteAllText(
+                    $"{Application.persistentDataPath}/{(oop ? "OOP" : "Compute")} {boidsInScene} boids {BoidHelper.directions.Length}.json", s);
         }
-    }
-    
-}
-
-[Serializable]
-public struct LogData
-{
-    public float frameTime;
-    public int actorsInScene;
-    public long frame;
-    public LogData(long pFrameCount, float pFrameTime, int pActorsInScene, LogLevel level)
-    {
-        frame = pFrameCount;
-        frameTime = -1;
-        actorsInScene = -1;
-
-        if(level.HasFlag(LogLevel.fps))
-        {
-            frameTime = pFrameTime;
-        }
-        if(level.HasFlag(LogLevel.objectsInScene))
-        {
-            actorsInScene = pActorsInScene;
-        }
-
 
     }
-    public string ConvertToJson()
+
+    [Serializable]
+    public struct LogData
     {
-        string jsonString = JsonUtility.ToJson(this,true);
-            
-        return jsonString;
+
+        public float frameTime;
+        public int boidsInScene;
+        public int obstaclesInScene;
+        public int viewDirections;
+        public long frame;
+
+        public LogData(long pFrameCount, float pFrameTime, int pBoidsInScene, int pObstaclesInScene, int pViewDirections, LogLevel level)
+        {
+            frame = pFrameCount;
+            frameTime = -1;
+            boidsInScene = -1;
+            obstaclesInScene = pObstaclesInScene;
+            viewDirections = pViewDirections;
+            if (level.HasFlag(LogLevel.fps))
+            {
+                frameTime = pFrameTime;
+            }
+
+            if (level.HasFlag(LogLevel.objectsInScene))
+            {
+                boidsInScene = pBoidsInScene;
+            }
+
+
+        }
+
+        public string ConvertToJson()
+        {
+            string jsonString = JsonUtility.ToJson(this, true);
+
+            return jsonString;
+        }
     }
 }

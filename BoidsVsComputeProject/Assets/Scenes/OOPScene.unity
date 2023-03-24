@@ -262,8 +262,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   logAmount: -1
-  path: C:\School_Stuff\Year_2\Term_3\Advanced_Tools\Repo\ECS_PerformanceStraining\Assets\DataLogs
+  path: 
   version: 0.0.1
+  oop: 1
 --- !u!1 &902115860
 GameObject:
   m_ObjectHideFlags: 0
